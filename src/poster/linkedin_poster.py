@@ -62,10 +62,23 @@ class LinkedInPoster:
     async def login(self) -> bool:
         try:
             logger.info("Navigating to LinkedIn login")
-            await self.page.goto("https://www.linkedin.com/login", wait_until="networkidle")
-            await self._random_delay(2, 4)
+            await self.page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded")
 
-            await self.page.fill("#username", settings.linkedin_email)
+            print(f"Current URL: {self.page.url}")
+
+            await self.page.screenshot(path="linkedin_login.png")
+
+            await self.page.wait_for_selector(
+    "#username, input[name='session_key'], input[type='email']",
+    timeout=60000
+)
+
+            if await self.page.locator("#username").count() > 0:
+             await self.page.fill("#username", settings.linkedin_email)
+            elif await self.page.locator("input[name='session_key']").count() > 0:
+             await self.page.fill("input[name='session_key']", settings.linkedin_email)
+            else:
+             await self.page.fill("input[type='email']", settings.linkedin_email)
             await self._random_delay(0.5, 1.5)
             await self.page.fill("#password", settings.linkedin_password)
             await self._random_delay(0.5, 1.5)
