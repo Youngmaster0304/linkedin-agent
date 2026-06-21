@@ -1,3 +1,4 @@
+ HEAD
 # LinkedIn Content Automation Agent
 
 Autonomous LinkedIn Content Automation Agent for Abhinav Jha — a dual-degree student (B.Tech ECE at IIIT Manipur + BS Data Science at IIT Madras), AI practitioner, and Social Media & Content Head at Synapse Club.
@@ -256,3 +257,7 @@ This project is part of Abhinav Jha's personal automation toolkit for content cr
 ## Support
 
 For issues or questions, please contact Abhinav Jha directly or refer to the documentation.
+
+# linkedin-agent
+AI-powered LinkedIn content agent that generates posts, creates images, publishes content, and tracks engagement automatically.
+7f4c2b3 (Initial commit)
