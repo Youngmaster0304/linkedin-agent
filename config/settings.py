@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     linkedin_password: str = Field(..., env="LINKEDIN_PASSWORD")
     linkedin_2fa_secret: Optional[str] = Field(None, env="LINKEDIN_2FA_SECRET")
 
-    # LLM API Keys (priority: Groq > OpenRouter > Cerebras)
+    # LLM API Keys (priority: HF/FLUX > Groq > OpenRouter > Cerebras)
+    hf_token: Optional[str] = Field(None, env="HF_TOKEN")
     groq_api_key: Optional[str] = Field(None, env="GROQ_API_KEY")
     openrouter_api_key: Optional[str] = Field(None, env="OPENROUTER_API_KEY")
     cerebras_api_key: Optional[str] = Field(None, env="CEREBRAS_API_KEY")

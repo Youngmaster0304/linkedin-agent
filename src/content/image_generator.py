@@ -1,14 +1,17 @@
 import httpx
+import io
 from typing import Optional
 from config.settings import settings
 
 
 class ImageGenerator:
     def __init__(self):
-        self.client = httpx.AsyncClient(timeout=60.0)
+        self.client = httpx.AsyncClient(timeout=120.0)
 
     async def generate_image(self, prompt: str, size: str = "1024x1024") -> Optional[str]:
         providers = []
+        if settings.hf_token:
+            providers.append(("HuggingFace/FLUX", self._generate_with_hf))
         if settings.groq_api_key:
             providers.append(("Groq", self._generate_with_groq))
         if settings.openrouter_api_key:
@@ -24,6 +27,25 @@ class ImageGenerator:
             except Exception as exc:
                 print(f"{provider_name} image generation error: {exc}")
         return None
+
+    async def _generate_with_hf(self, prompt: str, size: str) -> Optional[str]:
+        from huggingface_hub import InferenceClient
+        
+        client = InferenceClient(
+            provider="fal-ai",
+            api_key=settings.hf_token,
+        )
+        
+        # FLUX.1-dev works best with 1024x1024
+        image = client.text_to_image(
+            prompt,
+            model="black-forest-labs/FLUX.1-dev",
+        )
+        
+        # Convert PIL Image to bytes
+        img_bytes = io.BytesIO()
+        image.save(img_bytes, format="PNG")
+        return img_bytes.getvalue()
 
     async def _generate_with_groq(self, prompt: str, size: str) -> Optional[str]:
         import groq

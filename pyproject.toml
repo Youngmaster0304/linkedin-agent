@@ -24,6 +24,7 @@ dependencies = [
     "pyotp>=2.9.0",
     "pytz>=2024.0",
     "aiosqlite>=0.20.0",
+    "huggingface_hub>=0.20.0",
 ]
 
 [project.scripts]
