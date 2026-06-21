@@ -1,4 +1,3 @@
-import base64
 import httpx
 from typing import Optional
 from config.settings import settings
@@ -9,54 +8,21 @@ class ImageGenerator:
         self.client = httpx.AsyncClient(timeout=60.0)
 
     async def generate_image(self, prompt: str, size: str = "1024x1024") -> Optional[str]:
-        try:
-            if settings.openai_api_key:
-                return await self._generate_with_openai(prompt, size)
-            elif settings.gemini_api_key:
-                return await self._generate_with_gemini(prompt, size)
-            elif settings.groq_api_key:
-                return await self._generate_with_groq(prompt, size)
-            else:
-                return None
-        except Exception as e:
-            print(f"Image generation error: {e}")
-            return None
+        providers = []
+        if settings.groq_api_key:
+            providers.append(("Groq", self._generate_with_groq))
+        if settings.openrouter_api_key:
+            providers.append(("OpenRouter", self._generate_with_openrouter))
+        if settings.cerebras_api_key:
+            providers.append(("Cerebras", self._generate_with_cerebras))
 
-    async def _generate_with_openai(self, prompt: str, size: str) -> Optional[str]:
-        import openai
-        client = openai.OpenAI(api_key=settings.openai_api_key)
-        
-        response = client.images.generate(
-            model="dall-e-3",
-            prompt=prompt,
-            size=size,
-            quality="standard",
-            n=1,
-        )
-        
-        if response.data and response.data[0].url:
-            async with httpx.AsyncClient() as client:
-                img_response = await client.get(response.data[0].url)
-                if img_response.status_code == 200:
-                    return img_response.content
-        return None
-
-    async def _generate_with_gemini(self, prompt: str, size: str) -> Optional[str]:
-        import google.generativeai as genai
-        genai.configure(api_key=settings.gemini_api_key)
-        
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        
-        response = model.generate_content([
-            "Generate an image for this LinkedIn post:",
-            prompt,
-            "Make it professional, clean, and suitable for LinkedIn."
-        ])
-        
-        if response.candidates and response.candidates[0].content.parts:
-            part = response.candidates[0].content.parts[0]
-            if hasattr(part, 'inline_data') and part.inline_data:
-                return part.inline_data.data
+        for provider_name, generate in providers:
+            try:
+                image = await generate(prompt, size)
+                if image:
+                    return image
+            except Exception as exc:
+                print(f"{provider_name} image generation error: {exc}")
         return None
 
     async def _generate_with_groq(self, prompt: str, size: str) -> Optional[str]:
@@ -76,6 +42,48 @@ class ImageGenerator:
                 img_response = await client.get(response.data[0].url)
                 if img_response.status_code == 200:
                     return img_response.content
+        return None
+
+    async def _generate_with_openrouter(self, prompt: str, size: str) -> Optional[str]:
+        import openai
+        client = openai.OpenAI(
+            api_key=settings.openrouter_api_key,
+            base_url="https://openrouter.ai/api/v1",
+        )
+
+        response = client.images.generate(
+            model="openai/dall-e-3",
+            prompt=prompt,
+            size=size,
+            quality="standard",
+            n=1,
+        )
+
+        if response.data and response.data[0].url:
+            img_response = await self.client.get(response.data[0].url)
+            if img_response.status_code == 200:
+                return img_response.content
+        return None
+
+    async def _generate_with_cerebras(self, prompt: str, size: str) -> Optional[str]:
+        import openai
+        client = openai.OpenAI(
+            api_key=settings.cerebras_api_key,
+            base_url="https://api.cerebras.ai/v1",
+        )
+
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size=size,
+            quality="standard",
+            n=1,
+        )
+
+        if response.data and response.data[0].url:
+            img_response = await self.client.get(response.data[0].url)
+            if img_response.status_code == 200:
+                return img_response.content
         return None
 
     async def generate_placeholder_image(self, topic: str, style: str = "professional") -> str:

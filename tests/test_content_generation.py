@@ -69,3 +69,51 @@ async def test_image_generator():
         assert image_data is None or isinstance(image_data, bytes)
     finally:
         await generator.close()
+
+
+@pytest.mark.asyncio
+async def test_image_generator_prefers_groq(monkeypatch):
+    generator = ImageGenerator()
+    calls = []
+    monkeypatch.setattr("src.content.image_generator.settings.groq_api_key", "groq-key")
+    monkeypatch.setattr("src.content.image_generator.settings.openrouter_api_key", "router-key")
+
+    async def groq(prompt, size):
+        calls.append("groq")
+        return b"groq-image"
+
+    async def openrouter(prompt, size):
+        calls.append("openrouter")
+        return b"router-image"
+
+    monkeypatch.setattr(generator, "_generate_with_groq", groq)
+    monkeypatch.setattr(generator, "_generate_with_openrouter", openrouter)
+    try:
+        assert await generator.generate_image("prompt") == b"groq-image"
+        assert calls == ["groq"]
+    finally:
+        await generator.close()
+
+
+@pytest.mark.asyncio
+async def test_image_generator_falls_back_to_openrouter(monkeypatch):
+    generator = ImageGenerator()
+    calls = []
+    monkeypatch.setattr("src.content.image_generator.settings.groq_api_key", "groq-key")
+    monkeypatch.setattr("src.content.image_generator.settings.openrouter_api_key", "router-key")
+
+    async def groq(prompt, size):
+        calls.append("groq")
+        raise RuntimeError("provider unavailable")
+
+    async def openrouter(prompt, size):
+        calls.append("openrouter")
+        return b"router-image"
+
+    monkeypatch.setattr(generator, "_generate_with_groq", groq)
+    monkeypatch.setattr(generator, "_generate_with_openrouter", openrouter)
+    try:
+        assert await generator.generate_image("prompt") == b"router-image"
+        assert calls == ["groq", "openrouter"]
+    finally:
+        await generator.close()

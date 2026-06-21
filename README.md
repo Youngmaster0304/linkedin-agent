@@ -17,7 +17,7 @@ This project implements a complete LinkedIn content automation agent that:
 ### Content Generation Pipeline
 - **Research Agent**: Searches web and RSS feeds for latest AI/tech developments
 - **Content Writer**: Generates authentic LinkedIn posts with personal angles
-- **Image Generator**: Creates professional images for posts (OpenAI/Gemini/Groq)
+- **Image Generator**: Creates professional images with Groq and an OpenRouter fallback
 - **Quality Checks**: Ensures posts meet LinkedIn guidelines and authenticity
 
 ### LinkedIn Integration
@@ -52,7 +52,7 @@ This project implements a complete LinkedIn content automation agent that:
 - FastAPI, uvicorn
 - APScheduler, Playwright
 - SQLAlchemy, Alembic
-- OpenAI, Anthropic, Gemini, Groq APIs
+- Groq and OpenRouter APIs
 - PostgreSQL/MySQL/SQLite
 
 ## Configuration
@@ -66,11 +66,9 @@ LINKEDIN_EMAIL=your-email@example.com
 LINKEDIN_PASSWORD=your-linkedin-password
 LINKEDIN_2FA_SECRET=your-totp-secret-from-authenticator-app
 
-# LLM API Keys (at least one required)
-OPENAI_API_KEY=sk-your-openai-key
-ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
-GEMINI_API_KEY=your-gemini-key
-GROQ_API_KEY=your-groq-key
+# LLM API Keys (Groq primary, OpenRouter fallback)
+GROQ_API_KEY=gsk-your-groq-key
+OPENROUTER_API_KEY=sk-or-v1-your-openrouter-key
 
 # Database (default: local SQLite)
 DATABASE_URL=sqlite+aiosqlite:///./data/linkedin_agent.db
@@ -188,7 +186,8 @@ python -m src.main scheduler
    - LINKEDIN_EMAIL
    - LINKEDIN_PASSWORD
    - LINKEDIN_2FA_SECRET (optional)
-   - OPENAI_API_KEY or ANTHROPIC_API_KEY or GEMINI_API_KEY or GROQ_API_KEY
+   - GROQ_API_KEY
+   - OPENROUTER_API_KEY (fallback)
 
 2. Enable the workflow in your repository settings
 
