@@ -1,0 +1,93 @@
+name: LinkedIn Content Agent
+
+on:
+  schedule:
+    - cron: '0 10 * * *'  # Daily at 10:00 UTC
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to run'
+        required: true
+        default: 'once'
+        type: choice
+        options:
+          - once
+          - test
+          - analytics
+      topic:
+        description: 'Topic for test post (if command=test)'
+        required: false
+        type: string
+
+jobs:
+  linkedin-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    env:
+      LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
+      LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+      LINKEDIN_2FA_SECRET: ${{ secrets.LINKEDIN_2FA_SECRET }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      DATABASE_URL: sqlite+aiosqlite:///./data/linkedin_agent.db
+      POST_TIME_UTC: "10:00"
+      TIMEZONE: "Asia/Kolkata"
+      POSTS_PER_WEEK: "12"
+      HEADLESS: "true"
+      BROWSER_TIMEOUT: "60000"
+      TRACK_ENGAGEMENT: "true"
+      ENGAGEMENT_CHECK_HOURS: "24"
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+      
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+          playwright install --with-deps chromium
+      
+      - name: Create data directory
+        run: mkdir -p data
+      
+      - name: Run LinkedIn Agent
+        run: |
+          if [ "${{ github.event.inputs.command }}" = "test" ]; then
+            python -m src.main test --topic "${{ github.event.inputs.topic }}"
+          elif [ "${{ github.event.inputs.command }}" = "analytics" ]; then
+            python -m src.main analytics
+          else
+            python -m src.main once
+          fi
+      
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linkedin-agent-db
+          path: data/linkedin_agent.db
+          retention-days: 30
+      
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linkedin-agent-logs
+          path: |
+            *.log
+          retention-days: 7
